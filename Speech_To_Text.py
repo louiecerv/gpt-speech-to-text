@@ -5,6 +5,7 @@ import openai
 from openai import OpenAI
 import os
 from pydub import AudioSegment
+import wave  # For WAV file handling
 
 client = OpenAI(api_key=os.getenv("API_KEY"))
 #client = OpenAI(api_key=st.secrets["API_key"])
@@ -25,36 +26,43 @@ def record_audio(duration=5):
     st.write("Recording complete")
     return recording.tobytes()
 
-def transcribe_audio(audio_data):
+
+def save_audio_to_file(audio_data, filename="recording.wav"):
+    """Saves the recorded audio data (byte array) to a WAV file.
+
+    Args:
+        audio_data: A byte array containing the recorded audio data.
+        filename: The desired filename for the WAV file (default: "recording.wav").
+    """
+    with wave.open(filename, "wb") as wav_file:
+    wav_file.setnchannels(2)  # Set number of channels (stereo)
+    wav_file.setsampwidth(2)  # Set sample width (16 bits)
+    wav_file.setframerate(44100)  # Set frame rate (sampling rate)
+    wav_file.writeframes(audio_data)  # Write audio data to the WAV file
+    return filename
+
+def transcribe_audio(filename):
     """Transcribes audio data using the OpenAI Whisper model.
     Args:
         audio_data: A byte array containing the recorded audio data in WAV format.
     Returns:
         The transcribed text from the audio, or an error message if transcription fails.
     """
-
-    # Convert byte array to an AudioSegment object
-    audio = AudioSegment.from_wav(BytesIO(audio_data))
-
-    # Convert to one of the supported formats
-    audio_format = "ogg"  # Choose a supported format
-    audio_bytes = audio.export(format=audio_format).read()
-
     # Send the converted audio data to OpenAI API
     transcription = client.audio.transcriptions.create(
         model="whisper-1",
-        file=audio_bytes
+        file=filename
     )
 
     return transcription.text
-
 
 
 def app():
     st.title("Speech-to-Text with Streamlit and OpenAI")
     if st.button("Record Audio"):
         recorded_audio = record_audio()
-        transcription = transcribe_audio(recorded_audio)
+        filename = save_audio_to_file(recorded_audio)  # Save recording to file
+        transcription = transcribe_audio(filename)
         st.write("Transcription:")
         st.write(transcription if transcription else "No transcription available.")
 
