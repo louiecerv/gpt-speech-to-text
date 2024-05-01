@@ -4,11 +4,12 @@ from io import BytesIO
 import openai
 from openai import OpenAI
 import os
+from pydub import AudioSegment
 
 client = OpenAI(api_key=os.getenv("API_KEY"))
 #client = OpenAI(api_key=st.secrets["API_key"])
 
-def record_audio(duration=3):
+def record_audio(duration=5):
     """Records audio from the microphone for a specified duration (seconds).
 2
     Args:
@@ -19,7 +20,9 @@ def record_audio(duration=3):
     """
     fs = 44100  # Sampling rate
     recording = sd.rec(int(duration * fs), samplerate=fs, channels=2)
+    st.write("Recording started...")
     sd.wait()
+    st.write("Recording complete")
     return recording.tobytes()
 
 def transcribe_audio(audio_data):
@@ -30,18 +33,22 @@ def transcribe_audio(audio_data):
         The transcribed text from the audio, or an error message if transcription fails.
     """
 
-    try:
-        # Convert byte array to a file-like object for OpenAI API
-        audio_fileb = BytesIO(audio_data)
+    # Convert byte array to an AudioSegment object
+    audio = AudioSegment.from_wav(BytesIO(audio_data))
 
-        audio_file= open(audio_fileb, "rb")
-        transcription = client.audio.transcriptions.create(
-            model="whisper-1", 
-            file=audio_file
-        )
-        return transcription.text
-    except openai.error.OpenAIError as e:
-        return f"Error: {e}"
+    # Convert to one of the supported formats
+    audio_format = "ogg"  # Choose a supported format
+    audio_bytes = audio.export(format=audio_format).read()
+
+    # Send the converted audio data to OpenAI API
+    transcription = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_bytes
+    )
+
+    return transcription.text
+
+
 
 def app():
     st.title("Speech-to-Text with Streamlit and OpenAI")
