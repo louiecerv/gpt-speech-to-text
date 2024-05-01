@@ -35,13 +35,16 @@ def save_audio_to_file(audio_data, filename="recording.wav"):
         filename: The desired filename for the WAV file (default: "recording.wav").
     """
     with wave.open(filename, "wb") as wav_file:
-    wav_file.setnchannels(2)  # Set number of channels (stereo)
-    wav_file.setsampwidth(2)  # Set sample width (16 bits)
-    wav_file.setframerate(44100)  # Set frame rate (sampling rate)
-    wav_file.writeframes(audio_data)  # Write audio data to the WAV file
-    return filename
+        wav_file.setnchannels(2)  # Set number of channels (stereo)
+        wav_file.setsampwidth(2)  # Set sample width (16 bits)
+        wav_file.setframerate(44100)  # Set frame rate (sampling rate)
+        wav_file.writeframes(audio_data)  # Write audio data to the WAV file
+    
+        with open(filename, "rb") as wav_file:
+            audio_data = wav_file.read()
+    return audio_data
 
-def transcribe_audio(filename):
+def transcribe_audio(audio_data):
     """Transcribes audio data using the OpenAI Whisper model.
     Args:
         audio_data: A byte array containing the recorded audio data in WAV format.
@@ -51,7 +54,7 @@ def transcribe_audio(filename):
     # Send the converted audio data to OpenAI API
     transcription = client.audio.transcriptions.create(
         model="whisper-1",
-        file=filename
+        file=audio_data
     )
 
     return transcription.text
@@ -61,8 +64,8 @@ def app():
     st.title("Speech-to-Text with Streamlit and OpenAI")
     if st.button("Record Audio"):
         recorded_audio = record_audio()
-        filename = save_audio_to_file(recorded_audio)  # Save recording to file
-        transcription = transcribe_audio(filename)
+        audio_data = save_audio_to_file(recorded_audio)  # Save recording to file
+        transcription = transcribe_audio(audio_data)
         st.write("Transcription:")
         st.write(transcription if transcription else "No transcription available.")
 
